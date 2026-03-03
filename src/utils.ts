@@ -71,7 +71,7 @@ export async function searchVietnamLocations(query: string) {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Search for the location "${query}" in Vietnam. It could be a specific shop (like Lsoul), restaurant, hotel, or street. Use Google Search to find the real place. Return a JSON array of up to 5 best matches. Provide the exact latitude and longitude.`,
+      contents: `Search for the location or address "${query}" in Vietnam. It could be a specific shop (like Lsoul), restaurant, hotel, street, or a raw street address. Use Google Search to find the real place. Return a JSON array of up to 5 best matches. Provide the exact latitude and longitude.`,
       config: {
         tools: [{ googleSearch: {} }],
         responseMimeType: 'application/json',

@@ -13,14 +13,19 @@ export default function AddLocation() {
   const [inputText, setInputText] = useState('');
   const [manualSearch, setManualSearch] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [parsedData, setParsedData] = useState<{
+  const [formData, setFormData] = useState<{
     name: string;
     category: Category;
     address: string;
     notes: string;
     lat?: number;
     lng?: number;
-  } | null>(null);
+  }>({
+    name: '',
+    category: 'Other',
+    address: '',
+    notes: '',
+  });
 
   const handleAnalyze = async () => {
     if (!inputText.trim()) return;
@@ -64,7 +69,7 @@ export default function AddLocation() {
         result.category = 'Other';
       }
 
-      setParsedData(result);
+      setFormData(result);
     } catch (error) {
       console.error('Error analyzing text:', error);
       alert('Failed to analyze text. Please try again or enter manually.');
@@ -74,21 +79,24 @@ export default function AddLocation() {
   };
 
   const handleSave = async () => {
-    if (!parsedData) return;
+    if (!formData.name || !formData.address) {
+      alert('Name and Address are required.');
+      return;
+    }
     
-    let coords = { lat: parsedData.lat, lng: parsedData.lng };
+    let coords = { lat: formData.lat, lng: formData.lng };
     if (!coords.lat || !coords.lng) {
-      const geocoded = await geocodeAddress(parsedData.address);
+      const geocoded = await geocodeAddress(formData.address);
       if (geocoded) {
         coords = geocoded;
       }
     }
     
     addLocation({
-      name: parsedData.name,
-      category: parsedData.category,
-      address: parsedData.address,
-      notes: parsedData.notes,
+      name: formData.name,
+      category: formData.category,
+      address: formData.address,
+      notes: formData.notes,
       lat: coords.lat,
       lng: coords.lng,
     });
@@ -111,7 +119,7 @@ export default function AddLocation() {
           value={manualSearch}
           onChange={setManualSearch}
           onSelect={(loc) => {
-            setParsedData({
+            setFormData({
               name: loc.name,
               address: loc.display_name,
               category: 'Other',
@@ -166,66 +174,64 @@ export default function AddLocation() {
         </button>
       </div>
 
-      {parsedData && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <h3 className="font-semibold text-lg text-stone-900 mb-4 border-b border-stone-100 pb-2">Extracted Info</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Name</label>
-              <input
-                type="text"
-                value={parsedData.name}
-                onChange={(e) => setParsedData({ ...parsedData, name: e.target.value })}
-                className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            
-            <div>
-              <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Category</label>
-              <select
-                value={parsedData.category}
-                onChange={(e) => setParsedData({ ...parsedData, category: e.target.value as Category })}
-                className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
-              >
-                <option value="Restaurant">Restaurant</option>
-                <option value="Cafe">Cafe</option>
-                <option value="Bar">Bar</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Attraction">Attraction</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Address</label>
-              <LocationAutocomplete
-                value={parsedData.address}
-                onChange={(val) => setParsedData({ ...parsedData, address: val })}
-                onSelect={(loc) => setParsedData({ ...parsedData, address: loc.display_name, lat: loc.lat, lng: loc.lng })}
-                placeholder="Search to correct address..."
-              />
-            </div>
-            
-            <div>
-              <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Notes / Why go?</label>
-              <textarea
-                value={parsedData.notes}
-                onChange={(e) => setParsedData({ ...parsedData, notes: e.target.value })}
-                className="w-full h-24 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"
-              />
-            </div>
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-100 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <h3 className="font-semibold text-lg text-stone-900 mb-4 border-b border-stone-100 pb-2">Place Details</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+            />
           </div>
           
-          <button
-            onClick={handleSave}
-            className="w-full mt-6 bg-stone-900 text-white font-medium py-3 rounded-xl flex items-center justify-center space-x-2 hover:bg-stone-800 transition-colors"
-          >
-            <CheckCircle size={18} />
-            <span>Save to My Places</span>
-          </button>
+          <div>
+            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Category</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value as Category })}
+              className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+            >
+              <option value="Restaurant">Restaurant</option>
+              <option value="Cafe">Cafe</option>
+              <option value="Bar">Bar</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Attraction">Attraction</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Address</label>
+            <LocationAutocomplete
+              value={formData.address}
+              onChange={(val) => setFormData({ ...formData, address: val })}
+              onSelect={(loc) => setFormData({ ...formData, address: loc.display_name, lat: loc.lat, lng: loc.lng })}
+              placeholder="Search to correct address..."
+            />
+          </div>
+          
+          <div>
+            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Notes / Why go?</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full h-24 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"
+            />
+          </div>
         </div>
-      )}
+        
+        <button
+          onClick={handleSave}
+          className="w-full mt-6 bg-stone-900 text-white font-medium py-3 rounded-xl flex items-center justify-center space-x-2 hover:bg-stone-800 transition-colors"
+        >
+          <CheckCircle size={18} />
+          <span>Save to My Places</span>
+        </button>
+      </div>
     </div>
   );
 }
