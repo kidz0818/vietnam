@@ -29,41 +29,14 @@ export function estimateGrabTime(distanceKm: number): number {
 
 export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Find the exact latitude and longitude for the following address/place in Vietnam: "${address}". Return JSON.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            lat: { type: Type.NUMBER },
-            lng: { type: Type.NUMBER }
-          },
-          required: ["lat", "lng"]
-        }
-      }
-    });
-    const cleanText = (response.text || '{}').replace(/```json/gi, '').replace(/```/g, '').trim();
-    const data = JSON.parse(cleanText);
-    if (data.lat && data.lng) return data;
-    return null;
+    const results = await searchVietnamLocations(address);
+    if (results && results.length > 0) {
+      return { lat: results[0].lat, lng: results[0].lng };
+    }
   } catch (error) {
-    console.error("AI Geocoding error:", error);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Vietnam')}&limit=1`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
-      }
-    } catch (e) {}
-    return null;
+    console.error("Geocoding error:", error);
   }
+  return null;
 }
 
 export async function searchVietnamLocations(query: string) {
