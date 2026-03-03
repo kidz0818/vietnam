@@ -1,0 +1,5 @@
+{
+  "name": "Vietnam Explorer",
+  "description": "Personal Vietnam travel companion with AI-powered location extraction and recommendations.",
+  "requestFramePermissions": ["geolocation"]
+}
