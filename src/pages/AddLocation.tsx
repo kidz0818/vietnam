@@ -13,6 +13,7 @@ export default function AddLocation() {
   const [inputText, setInputText] = useState('');
   const [manualSearch, setManualSearch] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
     category: Category;
@@ -84,24 +85,45 @@ export default function AddLocation() {
       return;
     }
     
-    let coords = { lat: formData.lat, lng: formData.lng };
-    if (!coords.lat || !coords.lng) {
-      const geocoded = await geocodeAddress(formData.address);
-      if (geocoded) {
-        coords = geocoded;
+    setIsSaving(true);
+    try {
+      let coords = { lat: formData.lat, lng: formData.lng };
+      
+      // If no coords, try to geocode the address
+      if (!coords.lat || !coords.lng) {
+        let geocoded = await geocodeAddress(formData.address);
+        
+        // If that fails, try geocoding name + address for better context
+        if (!geocoded && formData.name) {
+          geocoded = await geocodeAddress(`${formData.name}, ${formData.address}`);
+        }
+        
+        if (geocoded) {
+          coords = geocoded;
+        }
       }
+      
+      if (!coords.lat || !coords.lng) {
+        const proceed = window.confirm("Could not find exact GPS coordinates for this address. Distance calculations won't work. Save anyway?");
+        if (!proceed) return;
+      }
+      
+      addLocation({
+        name: formData.name,
+        category: formData.category,
+        address: formData.address,
+        notes: formData.notes,
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+      
+      navigate('/');
+    } catch (error) {
+      console.error("Save error:", error);
+      alert("An error occurred while saving.");
+    } finally {
+      setIsSaving(false);
     }
-    
-    addLocation({
-      name: formData.name,
-      category: formData.category,
-      address: formData.address,
-      notes: formData.notes,
-      lat: coords.lat,
-      lng: coords.lng,
-    });
-    
-    navigate('/');
   };
 
   return (
@@ -208,7 +230,7 @@ export default function AddLocation() {
             <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-1 block">Address</label>
             <LocationAutocomplete
               value={formData.address}
-              onChange={(val) => setFormData({ ...formData, address: val })}
+              onChange={(val) => setFormData({ ...formData, address: val, lat: undefined, lng: undefined })}
               onSelect={(loc) => setFormData({ ...formData, address: loc.display_name, lat: loc.lat, lng: loc.lng })}
               placeholder="Search to correct address..."
             />
@@ -226,10 +248,20 @@ export default function AddLocation() {
         
         <button
           onClick={handleSave}
-          className="w-full mt-6 bg-stone-900 text-white font-medium py-3 rounded-xl flex items-center justify-center space-x-2 hover:bg-stone-800 transition-colors"
+          disabled={isSaving}
+          className="w-full mt-6 bg-stone-900 text-white font-medium py-3 rounded-xl flex items-center justify-center space-x-2 hover:bg-stone-800 transition-colors disabled:opacity-70"
         >
-          <CheckCircle size={18} />
-          <span>Save to My Places</span>
+          {isSaving ? (
+            <>
+              <Loader2 className="animate-spin" size={18} />
+              <span>Finding GPS & Saving...</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle size={18} />
+              <span>Save to My Places</span>
+            </>
+          )}
         </button>
       </div>
     </div>

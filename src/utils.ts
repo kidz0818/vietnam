@@ -46,7 +46,8 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; ln
         }
       }
     });
-    const data = JSON.parse(response.text || '{}');
+    const cleanText = (response.text || '{}').replace(/```json/gi, '').replace(/```/g, '').trim();
+    const data = JSON.parse(cleanText);
     if (data.lat && data.lng) return data;
     return null;
   } catch (error) {
@@ -90,7 +91,8 @@ export async function searchVietnamLocations(query: string) {
         }
       }
     });
-    const data = JSON.parse(response.text || '[]');
+    const cleanText = (response.text || '[]').replace(/```json/gi, '').replace(/```/g, '').trim();
+    const data = JSON.parse(cleanText);
     if (data.length > 0) return data;
     throw new Error("No AI results");
   } catch (error) {
