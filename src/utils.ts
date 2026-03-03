@@ -28,14 +28,58 @@ export function estimateGrabTime(distanceKm: number): number {
 }
 
 export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  // 1. Try a highly specific AI prompt just for geocoding
   try {
-    const results = await searchVietnamLocations(address);
-    if (results && results.length > 0) {
-      return { lat: results[0].lat, lng: results[0].lng };
-    }
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Find the approximate latitude and longitude for this address in Vietnam: "${address}". 
+      If the address contains foreign characters (like "越南" which means Vietnam) or zip codes (like 70000), ignore them and focus on the street, district, and city.
+      Return ONLY a valid JSON object with 'lat' and 'lng' number properties. Example: {"lat": 10.7923, "lng": 106.6904}`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            lat: { type: Type.NUMBER },
+            lng: { type: Type.NUMBER }
+          },
+          required: ["lat", "lng"]
+        }
+      }
+    });
+    const cleanText = (response.text || '{}').replace(/```json/gi, '').replace(/```/g, '').trim();
+    const data = JSON.parse(cleanText);
+    if (data.lat && data.lng) return data;
   } catch (error) {
-    console.error("Geocoding error:", error);
+    console.error("AI Geocoding error:", error);
   }
+
+  // 2. Fallback to Nominatim with cleaned address
+  try {
+    // Clean up common issues: Chinese characters, zip codes
+    let cleanAddress = address.replace(/越南/g, 'Vietnam').replace(/\b\d{5,6}\b/g, '').trim();
+    let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanAddress)}&limit=1`);
+    let data = await response.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+
+    // 3. Try even simpler address (just the first part + city)
+    const parts = cleanAddress.split(',').map(p => p.trim());
+    if (parts.length >= 2) {
+      // e.g., "36 Trần Quang Khải, Ho Chi Minh City, Vietnam"
+      const simplerAddress = `${parts[0]}, Ho Chi Minh City, Vietnam`;
+      response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(simplerAddress)}&limit=1`);
+      data = await response.json();
+      if (data && data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      }
+    }
+  } catch (e) {
+    console.error("Nominatim fallback error:", e);
+  }
+
   return null;
 }
 
